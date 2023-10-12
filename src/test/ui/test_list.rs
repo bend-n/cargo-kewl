@@ -1,8 +1,6 @@
-use crate::cargo::TestResult;
-use crate::test::TestState;
-
 use super::ls::SList;
-use super::Test;
+use crate::cargo::TestEvent;
+use crate::test::TestState;
 use ratatui::{
     layout::{Constraint::Percentage, Direction::Horizontal},
     prelude::*,
@@ -45,7 +43,7 @@ impl TestList {
         self.all().map(SList::prev);
     }
 
-    pub fn selects<'a>(&'a self, state: &'a TestState) -> Option<&Test> {
+    pub fn selects<'a>(&'a self, state: &'a TestState) -> Option<&TestEvent> {
         state.tests.get(self.a.state.selected()?)
     }
 
@@ -69,30 +67,31 @@ pub fn test_list<B: Backend>(f: &mut Frame<B>, state: &mut TestState, chunk: Rec
     }
     for test in &state.tests {
         match test {
-            Test::InProgress { name } => {
+            TestEvent::Started { name } => {
                 tests.pl(name.bold().yellow());
                 test_side1.pl("in progress".yellow().italic());
                 test_side2.pl("");
             }
-            Test::Succeeded(TestResult {
-                name,
-                exec_time,
-                stdout: _,
-            }) => {
+            TestEvent::Ok {
+                name, exec_time, ..
+            } => {
                 tests.pl(name.bold().green());
                 test_side1.pl("passed".green().italic());
                 test_side2.pl(time(*exec_time));
             }
-            Test::Failed(TestResult {
-                name,
-                exec_time,
-                stdout: _,
-            }) => {
+            TestEvent::Failed {
+                name, exec_time, ..
+            } => {
                 tests.pl(name.bold().red());
                 test_side1.pl("failed".red().bold().italic());
                 test_side2.pl(time(*exec_time));
             }
-            Test::Ignored { name } => {
+            TestEvent::Timeout { name } => {
+                tests.pl(name.bold().red());
+                test_side1.pl("timed out".red().bold().italic());
+                test_side2.pl("");
+            }
+            TestEvent::Ignored { name } => {
                 tests.pl(name.bold().yellow());
                 test_side1.pl("ignored".yellow().italic());
                 test_side2.pl("");

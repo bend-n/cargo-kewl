@@ -4,10 +4,7 @@ use ratatui::{
     Frame,
 };
 
-use crate::{
-    ctext,
-    test::{Test, TestState},
-};
+use crate::{cargo::TestEvent, ctext, test::TestState};
 
 pub fn progress<B: Backend>(f: &mut Frame<B>, state: &TestState, chunk: Rect) {
     let size =
@@ -19,10 +16,10 @@ pub fn progress<B: Backend>(f: &mut Frame<B>, state: &TestState, chunk: Rect) {
     let mut running = 0;
     for test in &state.tests {
         match test {
-            Test::Succeeded(_) => passing += 1,
-            Test::Ignored { .. } => ignored += 1,
-            Test::Failed(_) => failing += 1,
-            Test::InProgress { .. } => running += 1,
+            TestEvent::Ok { .. } => passing += 1,
+            TestEvent::Ignored { .. } => ignored += 1,
+            TestEvent::Failed { .. } | TestEvent::Timeout { .. } => failing += 1,
+            TestEvent::Started { .. } => running += 1,
         }
     }
     let progress = Paragraph::new(ctext!(

@@ -1,6 +1,8 @@
 mod ui;
 use anyhow::Result;
-use crossbeam::channel::{unbounded, Receiver};
+use cargo_metadata::libtest::SuiteEvent;
+use cargo_metadata::TestMessage as RTestMessage;
+use crossbeam::channel::Receiver;
 use crossterm::event::{self, Event, KeyCode};
 use ratatui::prelude::*;
 use ratatui::Terminal;
@@ -8,7 +10,7 @@ use std::path::Path;
 use std::time::{Duration, Instant};
 
 use crate::cargo;
-use crate::cargo::{test, TestEvent, TestMessage, TestResult};
+use crate::cargo::{test, TestEvent, TestMessage};
 use crate::test::ui::stdout::Stdout;
 
 #[derive(Default, PartialEq, Eq)]
@@ -18,44 +20,8 @@ pub enum Screen {
     Stdout,
 }
 
-enum Test {
-    InProgress { name: String },
-    Succeeded(TestResult),
-    Failed(TestResult),
-    Ignored { name: String },
-}
-
-impl Test {
-    fn name(&self) -> &str {
-        let (Self::InProgress { name }
-        | Self::Succeeded(TestResult { name, .. })
-        | Self::Failed(TestResult { name, .. })
-        | Self::Ignored { name }) = self;
-        name
-    }
-
-    fn stdout(&self) -> Option<&str> {
-        match self {
-            Self::Succeeded(TestResult { stdout, .. })
-            | Self::Failed(TestResult { stdout, .. }) => stdout.as_deref(),
-            _ => None,
-        }
-    }
-}
-
-trait VAt {
-    fn at(&mut self, which: &str) -> Option<&mut Test>;
-}
-
-impl VAt for Vec<Test> {
-    fn at(&mut self, which: &str) -> Option<&mut Test> {
-        let p = self.iter().position(|t| t.name() == which)?;
-        Some(&mut self[p])
-    }
-}
-
 pub struct TestState {
-    tests: Vec<Test>,
+    tests: Vec<TestEvent>, // use the event like a state (ok => in progress, ..)
     test_list: ui::test_list::TestList,
     rx: Receiver<TestMessage>,
     screen: Screen,
@@ -68,17 +34,14 @@ pub struct TestState {
 impl TestState {
     pub fn new(dir: Option<&Path>) -> Result<Self> {
         log::info!("initializing test state");
-        let (tx, rx) = unbounded();
-        let TestEvent::SuiteStart { test_count } = test(tx, dir)? else {
-            panic!("first ev should be suite start")
-        };
+        let rx = test(dir)?;
         Ok(Self {
             test_list: ui::test_list::TestList::default(),
             tests: vec![],
             rx,
             screen: Screen::default(),
             done: false,
-            test_count,
+            test_count: 0,
             time: 0.,
             stdout: Stdout::default(),
         })
@@ -97,30 +60,34 @@ impl TestState {
                     self.done = true;
                     return;
                 }
+                TestMessage::CompilerEvent(c) => {
+                    return;
+                }
             };
             match event {
-                TestEvent::TestStart { name } => {
-                    self.tests.push(Test::InProgress { name });
-                }
-                TestEvent::TestOk(r) => {
-                    let pre = self.tests.at(&r.name).unwrap();
-                    *pre = Test::Succeeded(r);
-                }
-                TestEvent::TestFail(r) => {
-                    let pre = self.tests.at(&r.name).unwrap();
-                    *pre = Test::Failed(r);
-                }
-                TestEvent::TestIgnore { name } => {
-                    let pre = self.tests.at(&name).unwrap();
-                    *pre = Test::Ignored { name };
-                }
-                TestEvent::SuiteOk { exec_time, .. } | TestEvent::SuiteFail { exec_time, .. } => {
-                    self.time += exec_time;
-                }
-                TestEvent::SuiteStart { test_count } => {
-                    log::trace!("have {test_count} tests");
-                    self.test_count += test_count;
-                }
+                RTestMessage::Test(t) => match t {
+                    TestEvent::Started { name } => {
+                        self.tests.push(TestEvent::Started { name });
+                    }
+                    t => {
+                        let i = self
+                            .tests
+                            .iter()
+                            .position(|o| o.name() == t.name())
+                            .unwrap();
+                        self.tests[i] = t;
+                    }
+                },
+                RTestMessage::Suite(s) => match s {
+                    SuiteEvent::Ok { exec_time, .. } | SuiteEvent::Failed { exec_time, .. } => {
+                        self.time += exec_time;
+                    }
+                    SuiteEvent::Started { test_count } => {
+                        log::trace!("have {test_count} tests");
+                        self.test_count += test_count;
+                    }
+                },
+                RTestMessage::Bench { .. } => unreachable!("not applicable"),
             };
         }
     }

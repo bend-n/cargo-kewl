@@ -7,9 +7,9 @@ use ratatui::{
 };
 
 use crate::{
-    cargo::TestResult,
+    cargo::TestEvent,
     ctext,
-    test::{Screen, Test, TestState},
+    test::{Screen, TestState},
 };
 
 pub fn inspector<B: Backend>(f: &mut Frame<B>, state: &TestState, chunk: Rect) {
@@ -25,7 +25,7 @@ pub fn inspector<B: Backend>(f: &mut Frame<B>, state: &TestState, chunk: Rect) {
         b
     };
     match t {
-        Test::Ignored { name } => {
+        TestEvent::Ignored { name } => {
             f.render_widget(
                 Paragraph::new(ctext!("test {:bold_yellow} was ignored", name))
                     .alignment(Alignment::Center)
@@ -34,7 +34,16 @@ pub fn inspector<B: Backend>(f: &mut Frame<B>, state: &TestState, chunk: Rect) {
                 chunk,
             );
         }
-        Test::Failed(TestResult { name, stdout, .. }) => {
+        TestEvent::Timeout { name } => {
+            f.render_widget(
+                Paragraph::new(ctext!("test {:bold_red} timed out", name))
+                    .alignment(Alignment::Center)
+                    .block(b)
+                    .wrap(Wrap { trim: true }),
+                chunk,
+            );
+        }
+        TestEvent::Failed { name, stdout, .. } => {
             if let Some(stdout) = stdout {
                 let chunks = Layout::new()
                     .direction(Vertical)
@@ -47,7 +56,7 @@ pub fn inspector<B: Backend>(f: &mut Frame<B>, state: &TestState, chunk: Rect) {
                     chunks[0],
                 );
                 f.render_widget(
-                    Paragraph::new(<String as ansi_to_tui::IntoText>::into_text(stdout).unwrap())
+                    Paragraph::new(<String as ansi_to_tui::IntoText>::into_text(&stdout).unwrap())
                         .block(stdblock())
                         .scroll((state.stdout.scroll, 0)),
                     chunks[1],
@@ -62,7 +71,7 @@ pub fn inspector<B: Backend>(f: &mut Frame<B>, state: &TestState, chunk: Rect) {
                 );
             }
         }
-        Test::Succeeded(TestResult { name, stdout, .. }) => {
+        TestEvent::Ok { name, stdout, .. } => {
             if let Some(stdout) = stdout {
                 let chunks = Layout::new()
                     .direction(Vertical)
@@ -75,7 +84,7 @@ pub fn inspector<B: Backend>(f: &mut Frame<B>, state: &TestState, chunk: Rect) {
                     chunks[0],
                 );
                 f.render_widget(
-                    Paragraph::new(<String as ansi_to_tui::IntoText>::into_text(stdout).unwrap())
+                    Paragraph::new(<String as ansi_to_tui::IntoText>::into_text(&stdout).unwrap())
                         .block(stdblock())
                         .scroll((state.stdout.scroll, 0)),
                     chunks[1],
@@ -90,7 +99,7 @@ pub fn inspector<B: Backend>(f: &mut Frame<B>, state: &TestState, chunk: Rect) {
                 );
             }
         }
-        Test::InProgress { name } => {
+        TestEvent::Started { name } => {
             f.render_widget(
                 Paragraph::new(ctext!("test {:bold_yellow} in progress", name))
                     .alignment(Alignment::Center)

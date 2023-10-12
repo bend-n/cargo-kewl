@@ -13,7 +13,7 @@ mod ls;
 mod progress;
 pub mod stdout;
 pub mod test_list;
-use super::{Screen, Test};
+use super::Screen;
 use crate::cargo;
 use crate::ctext;
 
