@@ -1,29 +1,12 @@
-use super::ls::SList;
 use crate::cargo::TestEvent;
 use crate::test::TestState;
-use ratatui::{
-    layout::{Constraint::Percentage, Direction::Horizontal},
-    prelude::*,
-    style::Stylize,
-    widgets::{Block, Borders, List, ListItem},
-    Frame,
-};
+use crate::ui::*;
 use std::time::Duration;
 #[derive(Default)]
 pub struct TestList {
     a: SList,
     b: SList,
     c: SList,
-}
-
-trait RExt<'a> {
-    fn pl(&mut self, list: impl Into<Line<'a>>);
-}
-
-impl<'a> RExt<'a> for Vec<ListItem<'a>> {
-    fn pl(&mut self, list: impl Into<Line<'a>>) {
-        self.push(ListItem::new(list.into()));
-    }
 }
 
 impl TestList {

@@ -1,14 +1,6 @@
-use ratatui::{
-    layout::Direction::Vertical,
-    prelude::*,
-    style::Stylize,
-    widgets::{Block, BorderType::*, Borders, Paragraph, Wrap},
-    Frame,
-};
-
+use crate::ui::*;
 use crate::{
     cargo::TestEvent,
-    ctext,
     test::{Screen, TestState},
 };
 
@@ -56,7 +48,7 @@ pub fn inspector<B: Backend>(f: &mut Frame<B>, state: &TestState, chunk: Rect) {
                     chunks[0],
                 );
                 f.render_widget(
-                    Paragraph::new(<String as ansi_to_tui::IntoText>::into_text(&stdout).unwrap())
+                    Paragraph::new(<String as ansi_to_tui::IntoText>::into_text(stdout).unwrap())
                         .block(stdblock())
                         .scroll((state.stdout.scroll, 0)),
                     chunks[1],
@@ -84,7 +76,7 @@ pub fn inspector<B: Backend>(f: &mut Frame<B>, state: &TestState, chunk: Rect) {
                     chunks[0],
                 );
                 f.render_widget(
-                    Paragraph::new(<String as ansi_to_tui::IntoText>::into_text(&stdout).unwrap())
+                    Paragraph::new(<String as ansi_to_tui::IntoText>::into_text(stdout).unwrap())
                         .block(stdblock())
                         .scroll((state.stdout.scroll, 0)),
                     chunks[1],

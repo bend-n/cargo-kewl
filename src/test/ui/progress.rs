@@ -1,10 +1,5 @@
-use ratatui::{
-    prelude::*,
-    widgets::{Block, BorderType::Rounded, Borders, Paragraph},
-    Frame,
-};
-
-use crate::{cargo::TestEvent, ctext, test::TestState};
+use crate::ui::*;
+use crate::{cargo::TestEvent, test::TestState};
 
 pub fn progress<B: Backend>(f: &mut Frame<B>, state: &TestState, chunk: Rect) {
     let size =

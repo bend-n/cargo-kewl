@@ -3,11 +3,11 @@ use ratatui::widgets::ListState;
 #[derive(Default)]
 pub struct SList {
     pub state: ListState,
-    itemc: usize,
+    pub itemc: usize,
 }
 
 pub const fn incr(what: usize, cap: usize) -> usize {
-    if what >= cap - 1 {
+    if what > cap - 1 {
         0
     } else {
         what + 1

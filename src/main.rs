@@ -11,9 +11,11 @@ use crossterm::{
 };
 use log::Level as RLevel;
 use ratatui::prelude::*;
-mod cargo;
+pub mod cargo;
+pub mod compiler;
 mod logger;
 mod test;
+pub mod ui;
 
 #[derive(Parser)]
 /// Kewl cargo addon for dashboards

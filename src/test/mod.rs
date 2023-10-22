@@ -6,6 +6,7 @@ use crossbeam::channel::Receiver;
 use crossterm::event::{self, Event, KeyCode};
 use ratatui::prelude::*;
 use ratatui::Terminal;
+use std::ops::ControlFlow;
 use std::path::Path;
 use std::time::{Duration, Instant};
 
@@ -60,8 +61,8 @@ impl TestState {
                     self.done = true;
                     return;
                 }
-                TestMessage::CompilerEvent(c) => {
-                    return;
+                TestMessage::CompilerEvent(e) => {
+                    unreachable!("comp module should have handled event {e:?}")
                 }
             };
             match event {
@@ -99,8 +100,14 @@ pub fn run<B: Backend>(
     meta: &cargo::Metadata,
 ) -> Result<()> {
     let mut state = TestState::new(dir)?;
+    match crate::compiler::run(terminal, meta, state.rx)? {
+        ControlFlow::Break(()) => return Ok(()),
+        ControlFlow::Continue(rx) => {
+            state.rx = rx;
+        }
+    }
     loop {
-        terminal.draw(|f| ui::ui(f, &mut state, &meta))?;
+        terminal.draw(|f| ui::ui(f, &mut state, meta))?;
         if event::poll(Duration::from_millis(5))? {
             if let Event::Key(key) = event::read()? {
                 match state.screen {

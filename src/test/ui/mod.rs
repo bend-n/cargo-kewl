@@ -1,21 +1,10 @@
-use ratatui::{
-    layout::{
-        Constraint::{Length, Min, Percentage},
-        Direction::{Horizontal, Vertical},
-    },
-    prelude::*,
-    widgets::{Block, BorderType::Rounded, Borders, Paragraph},
-    Frame,
-};
-
 mod inspector;
-mod ls;
 mod progress;
 pub mod stdout;
 pub mod test_list;
 use super::Screen;
 use crate::cargo;
-use crate::ctext;
+use crate::ui::*;
 
 pub fn ui<B: Backend>(f: &mut Frame<B>, state: &mut super::TestState, meta: &cargo::Metadata) {
     let chunks = Layout::default()

@@ -25,6 +25,7 @@ pub fn test(at: Option<&Path>) -> Result<Receiver<TestMessage>> {
         proc.arg("-C");
         proc.arg(at.as_os_str());
     }
+    // proc.env("RUSTFLAGS", format!("--diagnostic-width={width}"));
     proc.args([
         "-Zunstable-options",
         "test",
@@ -43,33 +44,44 @@ pub fn test(at: Option<&Path>) -> Result<Receiver<TestMessage>> {
     let mut tmp = Vec::with_capacity(32);
     let mut stdout = [0; 4096];
 
-    std::thread::spawn(move || loop {
-        let n = out.read(&mut stdout).unwrap();
-        for &byte in &stdout[..n] {
-            match byte {
-                b'\n' => {
-                    let val = serde_json::from_slice::<serde_json::Value>(&tmp).unwrap();
-                    log::debug!("got val: {}", serde_json::to_string_pretty(&val).unwrap());
-                    let event = match serde_json::value::from_value::<Message>(val.clone()) {
-                        Err(_) => TestMessage::Event(
-                            serde_json::value::from_value::<RawTestMessage>(val).unwrap(),
-                        ),
-                        Ok(v) => TestMessage::CompilerEvent(v),
-                    };
-                    tmp.clear();
-                    tx.send(event).unwrap();
+    macro_rules! handle {
+        ($n:expr) => {
+            let n = $n;
+            for &byte in &stdout[..n] {
+                match byte {
+                    b'\n' => {
+                        let val = serde_json::from_slice::<serde_json::Value>(&tmp).unwrap();
+                        log::debug!("got val: {}", serde_json::to_string_pretty(&val).unwrap());
+                        let event = match serde_json::value::from_value::<Message>(val.clone()) {
+                            Err(_) => TestMessage::Event(
+                                serde_json::value::from_value::<RawTestMessage>(val).unwrap(),
+                            ),
+                            Ok(v) => TestMessage::CompilerEvent(v),
+                        };
+                        tmp.clear();
+                        tx.send(event).unwrap();
+                    }
+                    b => tmp.push(b),
                 }
-                b => tmp.push(b),
             }
-        }
+        };
+    }
+    std::thread::spawn(move || loop {
+        handle!(out.read(&mut stdout).unwrap());
         if let Ok(Some(_)) = proc.try_wait() {
+            while let Ok(n) = out.read(&mut stdout) {
+                if n == 0 {
+                    break;
+                }
+                handle!(n);
+            }
             tx.send(TestMessage::Finished).unwrap();
             log::debug!("proc exited, joining thread");
             break;
         }
         std::thread::sleep(std::time::Duration::from_millis(50));
     });
-    return Ok(rx);
+    Ok(rx)
 }
 
 #[derive(Deserialize)]
