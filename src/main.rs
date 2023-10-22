@@ -5,9 +5,7 @@ use clap::Parser;
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
     execute,
-    terminal::{
-        disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen, SetTitle,
-    },
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use log::Level as RLevel;
 use ratatui::prelude::*;
@@ -71,12 +69,7 @@ fn main() -> Result<()> {
     )?;
 
     enable_raw_mode()?;
-    execute!(
-        stdout,
-        EnableMouseCapture,
-        EnterAlternateScreen,
-        SetTitle("testing")
-    )?;
+    execute!(stdout, EnableMouseCapture, EnterAlternateScreen)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
     let h = std::panic::take_hook();

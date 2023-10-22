@@ -164,6 +164,7 @@ pub fn run<B: Backend>(
     meta: &cargo::Metadata,
     rx: Receiver<TestMessage>,
 ) -> Result<ControlFlow<(), Receiver<TestMessage>>> {
+    print!("\x1b]0;compiling {}\x07", meta.package.name);
     let mut state = State::new(rx);
     loop {
         terminal.draw(|f| ui::ui(f, &mut state, meta))?;

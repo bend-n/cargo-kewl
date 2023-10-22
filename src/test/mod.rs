@@ -106,6 +106,7 @@ pub fn run<B: Backend>(
             state.rx = rx;
         }
     }
+    print!("\x1b]0;testing {}\x07", meta.package.name);
     loop {
         terminal.draw(|f| ui::ui(f, &mut state, meta))?;
         if event::poll(Duration::from_millis(5))? {
